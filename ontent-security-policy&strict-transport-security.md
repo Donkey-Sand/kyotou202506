@@ -227,3 +227,105 @@ Refused to load the script/style/image from XYZ because it violates the followin
 
 
 
+了解しました。以下は、今回の会話でご提供した「Content-Security-Policy（CSP）」および「Strict-Transport-Security（HSTS）」の設定に関する説明をまとめた 日本語のMarkdownファイル です。
+
+⸻
+
+📄 CloudFront における CSP および HSTS 設定ガイド（React + API Gateway 構成）
+
+⸻
+
+✅ 構成概要
+
+本ガイドは、以下のような AWS サーバーレス構成を前提としています：
+	•	フロントエンド：React で構築された SPA（Single Page Application）、S3 + CloudFront にデプロイ
+	•	バックエンド：API Gateway + Lambda による API 提供
+	•	地域：東京（ap-northeast-1）
+
+⸻
+
+✅ Content-Security-Policy（CSP）
+
+🔹 推奨設定（React + API Gateway 構成）
+
+Content-Security-Policy: default-src 'self';
+  script-src 'self';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data:;
+  font-src 'self';
+  connect-src 'self' https://*.execute-api.ap-northeast-1.amazonaws.com;
+  object-src 'none';
+  base-uri 'self';
+
+各ディレクティブの説明：
+
+ディレクティブ	説明
+default-src	全体のデフォルト制限。基本は 'self' のみに限定。
+script-src	JavaScript の読み込み先。React の場合 'self' で十分だが、外部 JS があれば追加必要。
+style-src	CSS の読み込み。React の一部ライブラリが unsafe-inline を必要とすることがある。
+img-src	画像の読み込み先。base64 を許可する場合は data: を追加。
+font-src	Web フォントの読み込み先。
+connect-src	API 通信先。API Gateway（東京リージョン）を許可。
+object-src	Flash などの古い技術を明示的にブロック。
+base-uri	<base> タグの使用制限。SPA では 'self' を推奨。
+
+
+⸻
+
+✅ Strict-Transport-Security（HSTS）
+
+🔹 推奨設定：
+
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+
+各項目の意味：
+
+パラメータ	意味
+max-age=31536000	ブラウザに HTTPS 通信を 1 年間強制
+includeSubDomains	サブドメインにも同様のルールを適用
+preload	ブラウザの HSTS プリロードリストへの登録を想定
+
+
+⸻
+
+✅ 設定手順（CloudFront）
+	1.	CloudFront コンソールを開く
+	2.	対象の Distribution を選択 → 「Behaviors」→ 編集
+	3.	「Response headers policy」を選択・作成
+	4.	以下の 2 つのヘッダーを追加：
+
+Header Name	Value（値）	Behavior
+Content-Security-Policy	default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://*.execute-api.ap-northeast-1.amazonaws.com; object-src 'none'; base-uri 'self';	Override
+Strict-Transport-Security	max-age=31536000; includeSubDomains; preload	Override
+
+
+⸻
+
+⚠️ 注意点とトラブル事例
+
+CSP の注意点：
+
+現象	原因例
+JS/CSS が読み込まれない	script-src / style-src が不十分
+API 通信失敗（CORS エラー）	connect-src に API Gateway のドメインが未設定
+画像やフォントが表示されない	img-src / font-src が未設定
+ページが真っ白になる	React のスクリプト実行が CSP によりブロック
+
+HSTS の注意点：
+
+リスク	説明
+HTTPS 強制により開発環境が使えない	max-age が長すぎて戻せないことがある。初期は 300（5分）など短めに設定し、確認後に長くするのが安全。
+preload 追加は慎重に	一度追加すると撤回は難しく、全サブドメインで HTTPS 対応が必須になる。事前に要検証。
+
+
+⸻
+
+✅ デバッグ・運用ヒント
+	•	ブラウザの DevTools → Network や Console タブで CSP/HSTS エラーを確認
+	•	初期は Content-Security-Policy-Report-Only を併用して影響を把握する
+	•	curl -I https://your-domain でレスポンスヘッダー確認
+	•	CloudFront の変更は数分遅延あり（キャッシュに注意）
+
+⸻
+
+必要であれば、この内容を .md ファイルとして出力したり、CloudFormation で自動設定するテンプレートも作成可能です。ご希望があればお知らせください。
