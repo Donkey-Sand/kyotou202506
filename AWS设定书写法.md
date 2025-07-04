@@ -178,6 +178,124 @@
 もし、現在進行中のプロジェクトに基づいて、この構成で具体的な文書を作成したい場合は、使用しているAWSサービスや構成を教えていただければ、それに沿って中身を埋めてご提供できます。ご希望があれば、お気軽にお知らせください。
 
 
+了解です！では、Jo さんが現在構築・運用している AWS の構成（React フロントエンド、API Gateway + Lambda + DynamoDB、Cognito 認証など）をベースに、「AWS設定方法」ドキュメントテンプレートへ代入したサンプルを以下にご提供します。
+
+⸻
+
+📘 AWS設定方法
+
+（React + API Gateway + Lambda + Cognito + DynamoDB 構成）
+
+⸻
+
+1. 概要（Overview）
+	•	本ドキュメントは、ユーザー検索機能付きのWebアプリケーションにおいて使用している AWS サービスの設定手順をまとめたものである。
+	•	対象読者：開発・運用担当者、保守・引継ぎメンバー
+	•	使用AWSサービス：
+　- AWS Amplify（フロントエンド自動デプロイ）
+　- API Gateway + Lambda（バックエンド API）
+　- Cognito（ユーザー認証）
+　- DynamoDB（検索履歴保存）
+　- S3 + CloudFront（静的配信・キャッシュ）
+
+⸻
+
+2. 前提条件（Prerequisites）
+	•	AWSアカウントにログイン可能なIAMユーザー（Admin権限を推奨）
+	•	AWS CLI・Node.js・Gitのインストール済みであること
+	•	GitHubリポジトリ（フロントエンドコード）の準備
+
+⸻
+
+3. サービス別設定方法
+
+3.1 IAM
+	•	Cognito連携用のLambda実行ロールを作成（AWSLambdaBasicExecutionRole＋DynamoDBアクセス権限を付与）
+	•	Amplifyにデプロイ権限を持たせるロール（AmplifyConsoleAccess）も必要
+
+⸻
+
+3.2 S3
+	•	静的ファイル（画像など）用の S3 バケットを作成
+	•	バケットポリシーで「静的ホスティング」＋CloudFront オリジンとして使用可能な設定に変更
+
+⸻
+
+3.3 CloudFront
+	•	Origin に S3 を指定し、フロントエンド静的配信を実現
+	•	「地理制限」や「HTTPS リダイレクト」「キャッシュ無効化設定」も検討
+	•	SPA（Single Page Application）のため 403/404 を index.html にリダイレクト
+
+⸻
+
+3.4 Amplify
+	•	GitHub リポジトリと接続（Amplify Console → Connect repository）
+	•	amplify.yml にビルド・デプロイ手順を記載
+	•	環境変数（APIエンドポイント、Cognito情報）を Amplify 上で設定
+
+⸻
+
+3.5 Lambda + API Gateway
+	•	Lambda（Python + FastAPI）を ZIP 形式でアップロード
+	•	Lambda 関数には DynamoDB への PutItem / Query 権限を付与
+	•	API Gateway は GET /search および GET /history を設定
+	•	Cognito オーソライザーを設定して認証ユーザーのみアクセス許可
+	•	CORS 設定（必要に応じて Access-Control-Allow-Origin 等を有効化）
+
+⸻
+
+3.6 DynamoDB
+	•	テーブル名：UserSearchHistory
+	•	パーティションキー：user_id、ソートキー：timestamp
+	•	認証済みユーザーのIDをキーにして履歴を保存
+	•	TTL 設定でデータの自動削除も可能
+
+⸻
+
+4. 共通設定
+
+4.1 CloudWatch
+	•	LambdaのログをCloudWatchに出力（自動）
+	•	必要に応じてアラームを設定（エラーレート・実行回数）
+
+4.2 CloudTrail
+	•	API 呼び出しの監査ログを有効化
+	•	セキュリティ事故発生時のトレーサビリティ確保
+
+4.3 コスト管理
+	•	Cost Explorer の有効化
+	•	月額上限を超えた場合に通知が来るよう「予算アラート」設定
+
+⸻
+
+5. セキュリティとコンプライアンス
+	•	Cognito を利用してパスワードポリシー・メール認証を設定
+	•	CloudFront に WAF を組み合わせて DDoS 攻撃やBotアクセス対策
+	•	S3 のパブリックアクセスはブロック、CloudFront 経由のみ許可
+	•	API Gateway では OAuth 認証（Cognito オーソライザー）を使用
+
+⸻
+
+6. 付録（Appendix）
+	•	参考リンク：
+　- Amplify 公式ドキュメント
+　- API Gateway + Cognito 認証設定
+　- FastAPI on Lambda
+	•	よくあるエラー：
+　- Amplify 環境変数の設定忘れでAPIエラー
+　- Cognito 認証トークン期限切れエラー
+　- DynamoDB の読み書き権限不足によるアクセス拒否
+	•	用語集：
+　- SPA：Single Page Application（一枚ページ型のウェブアプリ）
+　- IAM：Identity and Access Management
+　- TTL：Time to Live（データ自動削除期限）
+
+⸻
+
+如果你希望导出为 Markdown、PDF 或者 Word 文档格式，我也可以帮你转换。有需要的话告诉我即可。
+
+
+
 
 
 
